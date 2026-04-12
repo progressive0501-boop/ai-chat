@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 export type Message = {
+  id: string;
   role: "user" | "assistant";
   content: string;
 };
@@ -27,9 +28,9 @@ export default function MessageList({ messages, isLoading }: Props) {
         </div>
       )}
 
-      {messages.map((msg, i) => (
+      {messages.map((msg) => (
         <div
-          key={i}
+          key={msg.id}
           className={`flex items-end gap-2 ${
             msg.role === "user" ? "justify-end" : "justify-start"
           }`}

@@ -5,7 +5,7 @@ import { chatAgent } from "@/mastra/agents/chatAgent";
 
 const messageSchema = z.object({
   role: z.enum(["user", "assistant"]),
-  content: z.string().min(1),
+  content: z.string().min(1).max(2000),
 });
 
 const chatSchema = z.object({
