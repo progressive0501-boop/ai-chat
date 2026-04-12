@@ -72,22 +72,22 @@
 
 ### 🔴 高優先度（動作に影響あり）
 
-- [ ] `package.json` の `name` を `ai-chat-temp` → `ai-chat` に修正
-- [ ] Vercel のストリーミングタイムアウト対策
+- [x] `package.json` の `name` を `ai-chat-temp` → `ai-chat` に修正
+- [x] Vercel のストリーミングタイムアウト対策
   - `src/app/api/[[...route]]/route.ts` に `export const maxDuration = 30` を追加
   - Hobby プランはデフォルト10秒。長い AI 応答でレスポンスが途中切断されるリスクあり
-- [ ] メッセージ content の最大文字数制限を追加（Zod: `z.string().min(1).max(2000)`）
+- [x] メッセージ content の最大文字数制限を追加（Zod: `z.string().min(1).max(2000)`）
   - 制限なしだと大量トークン送信による意図せぬ API コスト増大のリスクあり
 
 ### 🟡 中優先度（品質・安定性）
 
-- [ ] `MessageList` の `key={i}` を安定した ID に変更
+- [x] `MessageList` の `key={i}` を安定した ID に変更
   - `Message` 型に `id: string` を追加し、`crypto.randomUUID()` で生成
   - 配列インデックスを key にすると React の差分検出が誤作動するリスクあり
-- [ ] ストリーミング中のコンポーネントアンマウント時のクリーンアップ
+- [x] ストリーミング中のコンポーネントアンマウント時のクリーンアップ
   - `Chat.tsx` で `AbortController` を使い、アンマウント時に `reader.cancel()` を呼ぶ
   - 現状はページ離脱・画面遷移時にストリーム読み取りが残り続けるメモリリーク
-- [ ] `src/mastra/index.ts` の未使用 `mastra` インスタンスを削除（デッドコード）
+- [x] `src/mastra/index.ts` の未使用 `mastra` インスタンスを削除（デッドコード）
   - `hono.ts` は `chatAgent` を直接インポートしており `mastra` は参照されていない
 
 ### 🟢 低優先度（堅牢性・UX）
