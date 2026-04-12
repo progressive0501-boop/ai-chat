@@ -7,7 +7,7 @@
   - `hono` `@mastra/core` `@ai-sdk/anthropic` `prisma` `@prisma/client` `zod`
 - [x] `.env.local` の作成と `ANTHROPIC_API_KEY` の設定（キー値を手動で記入してください）
 - [x] `prisma/schema.prisma` の初期設定
-- [ ] Vercel プロジェクトの作成・リポジトリ連携（手動作業: vercel.com でリポジトリを連携してください）
+- [x] Vercel プロジェクトの作成・リポジトリ連携（GitHub: progressive0501-boop/ai-chat）
 
 ---
 
@@ -60,9 +60,42 @@
 
 ## フェーズ 5: デプロイ
 
-- [ ] Vercel に環境変数 `ANTHROPIC_API_KEY` を設定
-- [ ] `main` ブランチへプッシュ → Vercel 自動デプロイ
-- [ ] 本番環境での動作確認
+- [x] Vercel に環境変数 `ANTHROPIC_API_KEY` を設定
+- [x] `master` ブランチへプッシュ → Vercel 自動デプロイ完了
+- [x] 本番環境での動作確認（`/api/health` + チャット応答確認済み）
+  - 本番 URL: https://ai-chat-black-eight.vercel.app
+  - GitHub: https://github.com/progressive0501-boop/ai-chat
+
+---
+
+## フェーズ 6: 残課題・品質改善
+
+### 🔴 高優先度（動作に影響あり）
+
+- [ ] `package.json` の `name` を `ai-chat-temp` → `ai-chat` に修正
+- [ ] Vercel のストリーミングタイムアウト対策
+  - `src/app/api/[[...route]]/route.ts` に `export const maxDuration = 30` を追加
+  - Hobby プランはデフォルト10秒。長い AI 応答でレスポンスが途中切断されるリスクあり
+- [ ] メッセージ content の最大文字数制限を追加（Zod: `z.string().min(1).max(2000)`）
+  - 制限なしだと大量トークン送信による意図せぬ API コスト増大のリスクあり
+
+### 🟡 中優先度（品質・安定性）
+
+- [ ] `MessageList` の `key={i}` を安定した ID に変更
+  - `Message` 型に `id: string` を追加し、`crypto.randomUUID()` で生成
+  - 配列インデックスを key にすると React の差分検出が誤作動するリスクあり
+- [ ] ストリーミング中のコンポーネントアンマウント時のクリーンアップ
+  - `Chat.tsx` で `AbortController` を使い、アンマウント時に `reader.cancel()` を呼ぶ
+  - 現状はページ離脱・画面遷移時にストリーム読み取りが残り続けるメモリリーク
+- [ ] `src/mastra/index.ts` の未使用 `mastra` インスタンスを削除（デッドコード）
+  - `hono.ts` は `chatAgent` を直接インポートしており `mastra` は参照されていない
+
+### 🟢 低優先度（堅牢性・UX）
+
+- [ ] API のレート制限を追加（Hono ミドルウェアまたは Vercel Edge Config）
+  - API キー URL が漏れた際の Claude API 悪用・コスト爆発を防ぐ
+- [ ] `src/app/error.tsx` を作成
+  - 未処理の React エラー時に Next.js デフォルト画面でなく、アプリのデザインに合ったエラー表示にする
 
 ---
 
