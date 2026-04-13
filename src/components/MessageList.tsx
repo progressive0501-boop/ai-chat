@@ -1,15 +1,46 @@
 import { useEffect, useRef } from "react";
 
+export type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image"; dataUrl: string; mediaType: string };
+
 export type Message = {
   id: string;
   role: "user" | "assistant";
-  content: string;
+  content: string | ContentPart[];
 };
 
 type Props = {
   messages: Message[];
   isLoading: boolean;
 };
+
+function MessageContent({ content }: { content: string | ContentPart[] }) {
+  if (typeof content === "string") {
+    return <>{content}</>;
+  }
+  return (
+    <div className="space-y-2">
+      {content.map((part, i) => {
+        if (part.type === "text") {
+          return (
+            <p key={i} className="whitespace-pre-wrap">
+              {part.text}
+            </p>
+          );
+        }
+        return (
+          <img
+            key={i}
+            src={part.dataUrl}
+            alt="添付画像"
+            className="max-w-full rounded-lg block"
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 export default function MessageList({ messages, isLoading }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -48,7 +79,7 @@ export default function MessageList({ messages, isLoading }: Props) {
                 : "bg-white text-gray-800 rounded-bl-sm border border-gray-100"
             }`}
           >
-            {msg.content}
+            <MessageContent content={msg.content} />
           </div>
 
           {msg.role === "user" && (
