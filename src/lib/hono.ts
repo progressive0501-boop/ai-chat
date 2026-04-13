@@ -3,9 +3,27 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { chatAgent } from "@/mastra/agents/chatAgent";
 
+const textPartSchema = z.object({
+  type: z.literal("text"),
+  text: z.string().min(1).max(50000),
+});
+
+// data URL の最大長: 5MB ファイルの base64 エンコード後 ≈ 6.7MB 文字
+// Vercel Hobby プランのペイロード上限(4.5MB)に注意。本番環境では画像サイズを調整すること。
+const imagePartSchema = z.object({
+  type: z.literal("image"),
+  dataUrl: z.string().startsWith("data:").max(8_000_000),
+  mediaType: z.enum(["image/jpeg", "image/png", "image/gif", "image/webp"]),
+});
+
+const contentPartSchema = z.discriminatedUnion("type", [textPartSchema, imagePartSchema]);
+
 const messageSchema = z.object({
   role: z.enum(["user", "assistant"]),
-  content: z.string().min(1).max(2000),
+  content: z.union([
+    z.string().min(1).max(50000),
+    z.array(contentPartSchema).min(1),
+  ]),
 });
 
 const chatSchema = z.object({
@@ -31,10 +49,32 @@ app.post("/chat", zValidator("json", chatSchema), async (c) => {
 
   const { messages } = c.req.valid("json");
 
-  const coreMessages = messages.map((m) => ({
-    role: m.role as "user" | "assistant",
-    content: m.content,
-  }));
+  const coreMessages = messages.map((m) => {
+    if (typeof m.content === "string") {
+      return {
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      };
+    }
+
+    return {
+      role: m.role as "user" | "assistant",
+      content: m.content.map((part) => {
+        if (part.type === "text") {
+          return { type: "text" as const, text: part.text };
+        }
+        // AI SDK の ImagePart には raw base64 を渡す（data URL ではなく）
+        const base64 = part.dataUrl.includes(",")
+          ? part.dataUrl.split(",")[1]
+          : part.dataUrl;
+        return {
+          type: "image" as const,
+          image: base64,
+          mimeType: part.mediaType,
+        };
+      }),
+    };
+  });
 
   try {
     const result = await chatAgent.stream(coreMessages);

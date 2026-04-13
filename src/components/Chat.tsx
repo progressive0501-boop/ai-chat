@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import MessageList, { type Message } from "./MessageList";
-import MessageInput from "./MessageInput";
+import MessageList, { type Message, type ContentPart } from "./MessageList";
+import MessageInput, { type AttachedImage } from "./MessageInput";
 
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<AttachedImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -17,19 +18,43 @@ export default function Chat() {
     };
   }, []);
 
+  const handleAttach = useCallback((newImages: AttachedImage[]) => {
+    setAttachments((prev) => [...prev, ...newImages]);
+  }, []);
+
+  const handleRemoveAttachment = useCallback((id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
   const sendMessage = useCallback(async () => {
     const userText = input.trim();
-    if (!userText || isLoading) return;
+    if ((!userText && attachments.length === 0) || isLoading) return;
+
+    // テキストのみの場合は string、画像ありの場合は ContentPart[] で送信
+    let content: string | ContentPart[];
+    if (attachments.length === 0) {
+      content = userText;
+    } else {
+      const parts: ContentPart[] = [];
+      if (userText) {
+        parts.push({ type: "text", text: userText });
+      }
+      for (const att of attachments) {
+        parts.push({ type: "image", dataUrl: att.dataUrl, mediaType: att.mediaType });
+      }
+      content = parts;
+    }
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
-      content: userText,
+      content,
     };
     const nextMessages = [...messages, userMessage];
 
     setMessages(nextMessages);
     setInput("");
+    setAttachments([]);
     setIsLoading(true);
 
     const assistantId = crypto.randomUUID();
@@ -108,7 +133,7 @@ export default function Chat() {
     } finally {
       setIsLoading(false);
     }
-  }, [input, messages, isLoading]);
+  }, [input, messages, isLoading, attachments]);
 
   const isAiTyping =
     isLoading && messages.at(-1)?.role === "assistant" && messages.at(-1)?.content === "";
@@ -121,6 +146,9 @@ export default function Chat() {
         onChange={setInput}
         onSubmit={sendMessage}
         isLoading={isLoading}
+        attachments={attachments}
+        onAttach={handleAttach}
+        onRemoveAttachment={handleRemoveAttachment}
       />
     </div>
   );
